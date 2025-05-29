@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ComplaintFormApp extends StatelessWidget {
   const ComplaintFormApp({Key? key}) : super(key: key);
@@ -108,9 +109,9 @@ class _ComplaintFormPageState extends State<ComplaintFormPage> with SingleTicker
           formData['phone'],
           formData['email']
         ].where((e) => e.isNotEmpty).join(', '),
-        'created_at': DateTime.now().toString(),
+        'created_at': DateTime.now().add(Duration(hours: 6)).toIso8601String(),
         'status': 'pending',
-        'submission_source': 'website',
+        'submission_source': 'mobile_app',
         'location_source': 'manual_input',
         'latitude': null,
         'longitude': null,
@@ -119,15 +120,38 @@ class _ComplaintFormPageState extends State<ComplaintFormPage> with SingleTicker
       };
 
       print('Submitting complaint: $complaintData');
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
-      setState(() {
-        showSuccess = true;
-        _controller.forward(from: 0);
-        formData.updateAll((key, value) => key == 'report_type' ? 'Жалоба' : key == 'importance' ? 'medium' : key == 'language' ? 'ru' : '');
-      });
+      
+      // Send data to the API endpoint
+      final response = await http.post(
+        Uri.parse('https://publicpulse-back-739844766362.asia-southeast2.run.app/api/reports/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode(complaintData),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Success
+        setState(() {
+          showSuccess = true;
+          _controller.forward(from: 0);
+          formData.updateAll((key, value) => key == 'report_type' ? 'Жалоба' : key == 'importance' ? 'medium' : key == 'language' ? 'ru' : '');
+        });
+      } else {
+        // API error
+        throw Exception('Ошибка сервера: ${response.statusCode}\nОтвет: ${response.body}');
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка при отправке: $e')),
+        SnackBar(
+          content: Text('Ошибка при отправке: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 5),
+        ),
       );
     } finally {
       setState(() => isSubmitting = false);
