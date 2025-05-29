@@ -102,6 +102,10 @@ class _ComplaintFormPageState extends State<ComplaintFormPage> with SingleTicker
     setState(() => isSubmitting = true);
 
     try {
+      // Format timestamp using local device time
+      final localTime = DateTime.now();
+      final formattedTimestamp = '${localTime.day.toString().padLeft(2, '0')}.${localTime.month.toString().padLeft(2, '0')}.${localTime.year} ${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}';
+      
       final complaintData = {
         ...formData,
         'contact_info': [
@@ -109,7 +113,7 @@ class _ComplaintFormPageState extends State<ComplaintFormPage> with SingleTicker
           formData['phone'],
           formData['email']
         ].where((e) => e.isNotEmpty).join(', '),
-        'created_at': DateTime.now().add(Duration(hours: 6)).toIso8601String(),
+        'created_at': formattedTimestamp,
         'status': 'pending',
         'submission_source': 'mobile_app',
         'location_source': 'manual_input',
